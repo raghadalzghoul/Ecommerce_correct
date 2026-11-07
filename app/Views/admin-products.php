@@ -16,6 +16,7 @@
         <a href="?page=admin-dashboard" class="navbar-brand fw-bold">
             SimpleShop Admin
         </a>
+
         <a href="?page=admin-dashboard" class="btn btn-outline-dark">
             Dashboard
         </a>
@@ -28,6 +29,7 @@
 
     <div id="message"></div>
 
+    <!-- Add Product -->
     <h4>Add New Product</h4>
 
     <form id="product-form" class="border rounded p-3 mb-5"
@@ -66,9 +68,9 @@
         <button type="submit" class="btn btn-dark">
             Add Product
         </button>
-
     </form>
 
+    <!-- Products Table -->
     <h4 class="mb-3">Products List</h4>
 
     <div class="table-responsive">
@@ -79,19 +81,69 @@
                     <th>Name</th>
                     <th>Price</th>
                     <th>Category ID</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
 
             <tbody id="products-table">
                 <tr>
-                    <td colspan="4">Loading products...</td>
+                    <td colspan="5">Loading products...</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
+    <!-- Edit Product -->
+    <h4 class="mt-5">Edit Product</h4>
+
+    <form id="edit-product-form"
+          class="border rounded p-3 mb-4"
+          enctype="multipart/form-data">
+
+        <input type="hidden" id="edit-product-id">
+
+        <div class="mb-3">
+            <label class="form-label">Product Name</label>
+            <input type="text" name="name" id="edit-name"
+                   class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" id="edit-description"
+                      class="form-control" required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Price</label>
+            <input type="number" name="price" id="edit-price"
+                   class="form-control" min="0.01"
+                   step="0.01" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Category</label>
+            <select name="cat_id" id="edit-category"
+                    class="form-select" required>
+                <option value="">Choose Category</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">New Image (Optional)</label>
+            <input type="file" name="image" id="edit-image"
+                   class="form-control"
+                   accept="image/jpeg,image/png,image/webp">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Save Changes
+        </button>
+    </form>
+
 </main>
 
 <script src="assets/js/admin-products.js"></script>
+
 </body>
 </html>

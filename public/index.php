@@ -96,9 +96,45 @@ switch ($page) {
     require __DIR__ . '/../app/Views/admin-products.php';
     break;
 
+   case 'admin-categories':
 
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: index.php?page=login');
+        exit;
+    }
+
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        require __DIR__ . '/../app/Views/403.php';
+        exit;
+    }
+
+    require __DIR__ . '/../app/Views/admin-categories.php';
+    break;
+
+    case 'admin-orders':
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: index.php?page=login');
+        exit;
+    }
+
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        require __DIR__ . '/../app/Views/403.php';
+        exit;
+    }
+
+    require __DIR__ . '/../app/Views/admin-orders.php';
+    break;
     default:
         http_response_code(404);
         echo '404 - Page Not Found';
