@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Models/Product.php';
+require_once __DIR__ . '/../Core/CloudinaryUploader.php';
 
 class ProductController
 {
@@ -163,10 +164,8 @@ public function create(): void
         session_start();
     }
 
-    // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
-
         echo json_encode([
             'success' => false,
             'message' => 'Please login first'
@@ -174,47 +173,37 @@ public function create(): void
         return;
     }
 
-    // Check if user is admin
     if (($_SESSION['role'] ?? '') !== 'admin') {
         http_response_code(403);
-
         echo json_encode([
             'success' => false,
-            'message' => 'Access denied. Admin only'
+            'message' => 'Admin access required'
         ]);
         return;
     }
 
-    // Read JSON request body
-    $data = json_decode(file_get_contents('php://input'), true);
-
-    if (!is_array($data)) {
-        http_response_code(400);
-
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid JSON'
-        ]);
-        return;
-    }
-
-    // Validate product information
-    $name = $data['name'] ?? null;
-    $description = $data['description'] ?? null;
-    $price = $data['price'] ?? null;
-    $catId = $data['cat_id'] ?? null;
-    $imageUrl = $data['image_url'] ?? null;
+    // Read form-data
+    $name = $_POST['name'] ?? null;
+    $description = $_POST['description'] ?? null;
+    $price = $_POST['price'] ?? null;
+    $catId = filter_var(
+        $_POST['cat_id'] ?? null,
+        FILTER_VALIDATE_INT
+    );
 
     if (
-        !is_string($name) || trim($name) === '' ||
+        !is_string($name) ||
+        trim($name) === '' ||
+        strlen(trim($name)) > 255 ||
         !is_string($description) ||
-        !is_numeric($price) || (float) $price <= 0 ||
-        filter_var($catId, FILTER_VALIDATE_INT) === false ||
-        (int) $catId <= 0 ||
-        ($imageUrl !== null && !is_string($imageUrl))
+        !is_numeric($price) ||
+        !is_finite((float) $price) ||
+        (float) $price <= 0 ||
+        $catId === false ||
+        $catId === null ||
+        $catId <= 0
     ) {
         http_response_code(422);
-
         echo json_encode([
             'success' => false,
             'message' => 'Invalid product information'
@@ -222,7 +211,58 @@ public function create(): void
         return;
     }
 
+    // Validate required image
+    $image = $_FILES['image'] ?? null;
+
+    if (
+        !is_array($image) ||
+        is_array($image['error'] ?? null) ||
+        ($image['error'] ?? null) !== UPLOAD_ERR_OK ||
+        !isset($image['tmp_name'], $image['size']) ||
+        !is_string($image['tmp_name']) ||
+        !is_uploaded_file($image['tmp_name']) ||
+        $image['size'] <= 0 ||
+        $image['size'] > 2 * 1024 * 1024
+    ) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'A valid image (max 2 MB) is required'
+        ]);
+        return;
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime = $finfo->file($image['tmp_name']);
+
+    if (
+        !in_array(
+            $mime,
+            ['image/jpeg', 'image/png', 'image/webp'],
+            true
+        ) ||
+        getimagesize($image['tmp_name']) === false
+    ) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Only JPG, PNG and WEBP images are allowed'
+        ]);
+        return;
+    }
+
     try {
+        // Upload image to Cloudinary
+        $uploader = new CloudinaryUploader();
+
+        $uploaded = $uploader->upload(
+            $image['tmp_name'],
+            'ecommerce/products'
+        );
+
+        $imageUrl = $uploaded['image_url'];
+
+        // Save product to MySQL
         $productId = $this->product->createProduct(
             trim($name),
             trim($description),
@@ -236,10 +276,13 @@ public function create(): void
         echo json_encode([
             'success' => true,
             'message' => 'Product created successfully',
-            'product_id' => $productId
+            'product_id' => $productId,
+            'image_url' => $imageUrl
         ]);
 
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+
         http_response_code(500);
 
         echo json_encode([
@@ -254,14 +297,13 @@ public function create(): void
 
 
 
-
 public function update(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Check authentication
+    // Authentication
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401);
         echo json_encode([
@@ -271,12 +313,12 @@ public function update(): void
         return;
     }
 
-    // Check admin role
+    // Admin only
     if (($_SESSION['role'] ?? '') !== 'admin') {
         http_response_code(403);
         echo json_encode([
             'success' => false,
-            'message' => 'Access denied. Admin only'
+            'message' => 'Admin access required'
         ]);
         return;
     }
@@ -284,7 +326,7 @@ public function update(): void
     // Validate product ID
     $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-    if ($id === false || $id === null || $id <= 0) {
+    if (!$id || $id <= 0) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
@@ -293,41 +335,27 @@ public function update(): void
         return;
     }
 
-    // Check product exists
-    if ($this->product->getProductById($id) === false) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Product not found'
-        ]);
-        return;
-    }
+    // Read multipart/form-data
+    $name = $_POST['name'] ?? null;
+    $description = $_POST['description'] ?? null;
+    $price = $_POST['price'] ?? null;
 
-    // Read JSON
-    $data = json_decode(file_get_contents('php://input'), true);
-
-    if (!is_array($data)) {
-        http_response_code(400);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid JSON'
-        ]);
-        return;
-    }
-
-    $name = $data['name'] ?? null;
-    $description = $data['description'] ?? null;
-    $price = $data['price'] ?? null;
-    $catId = $data['cat_id'] ?? null;
-    $imageUrl = $data['image_url'] ?? null;
+    $catId = filter_var(
+        $_POST['cat_id'] ?? null,
+        FILTER_VALIDATE_INT
+    );
 
     if (
-        !is_string($name) || trim($name) === '' ||
+        !is_string($name) ||
+        trim($name) === '' ||
+        strlen(trim($name)) > 255 ||
         !is_string($description) ||
-        !is_numeric($price) || (float) $price <= 0 ||
-        filter_var($catId, FILTER_VALIDATE_INT) === false ||
-        (int) $catId <= 0 ||
-        ($imageUrl !== null && !is_string($imageUrl))
+        !is_numeric($price) ||
+        !is_finite((float) $price) ||
+        (float) $price <= 0 ||
+        $catId === false ||
+        $catId === null ||
+        $catId <= 0
     ) {
         http_response_code(422);
         echo json_encode([
@@ -337,9 +365,82 @@ public function update(): void
         return;
     }
 
+    // Image is optional
+    $image = $_FILES['image'] ?? null;
+
+    $hasImage = is_array($image) &&
+        ($image['error'] ?? UPLOAD_ERR_NO_FILE)
+            !== UPLOAD_ERR_NO_FILE;
+
+    if ($hasImage) {
+        if (
+            is_array($image['error'] ?? null) ||
+            $image['error'] !== UPLOAD_ERR_OK ||
+            !isset($image['tmp_name'], $image['size']) ||
+            !is_string($image['tmp_name']) ||
+            !is_uploaded_file($image['tmp_name']) ||
+            $image['size'] <= 0 ||
+            $image['size'] > 2 * 1024 * 1024
+        ) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid image or image exceeds 2 MB'
+            ]);
+            return;
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($image['tmp_name']);
+
+        if (
+            !in_array(
+                $mime,
+                ['image/jpeg', 'image/png', 'image/webp'],
+                true
+            ) ||
+            getimagesize($image['tmp_name']) === false
+        ) {
+            http_response_code(422);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Only JPG, PNG and WEBP images are allowed'
+            ]);
+            return;
+        }
+    }
+
     try {
+        // Get existing product
+        $product = $this->product->getProductById((int) $id);
+
+        if (!$product) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Product not found'
+            ]);
+            return;
+        }
+
+        // Keep existing image
+        $imageUrl = $product['image_url'];
+
+        // Replace image if a new file was uploaded
+        if ($hasImage) {
+            $uploader = new CloudinaryUploader();
+
+            $uploaded = $uploader->upload(
+                $image['tmp_name'],
+                'ecommerce/products'
+            );
+
+            $imageUrl = $uploaded['image_url'];
+        }
+
+        // Update database
         $this->product->updateProduct(
-            $id,
+            (int) $id,
             trim($name),
             trim($description),
             (float) $price,
@@ -347,12 +448,18 @@ public function update(): void
             $imageUrl
         );
 
+        http_response_code(200);
+
         echo json_encode([
             'success' => true,
-            'message' => 'Product updated successfully'
+            'message' => 'Product updated successfully',
+            'product_id' => (int) $id,
+            'image_url' => $imageUrl
         ]);
 
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+
         http_response_code(500);
         echo json_encode([
             'success' => false,

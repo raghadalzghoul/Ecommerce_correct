@@ -6,6 +6,7 @@ require_once __DIR__ . '/app/Controllers/ProductController.php';
 require_once __DIR__ . '/app/Controllers/CartController.php';
 require_once __DIR__ . '/app/Controllers/OrderController.php';
 require_once __DIR__ . '/app/Controllers/CategoryController.php';
+require_once __DIR__ . '/app/Controllers/DashboardController.php';
 
 function handleApiRequest(): void
 {
@@ -212,7 +213,7 @@ case 'logout':
 
     case 'admin-update-product':
 
-    if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
         header('Allow: PUT');
 
@@ -694,7 +695,7 @@ case 'admin-update-order-status':
 
 
 
-    
+
 
 
     case 'admin-delete-category':
@@ -716,6 +717,34 @@ case 'admin-update-order-status':
     $controller->delete();
 
     break;
+
+
+
+
+
+
+    case 'admin-dashboard':
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        http_response_code(405);
+        header('Allow: GET');
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Method not allowed'
+        ]);
+        break;
+    }
+
+    $controller = new DashboardController();
+    $controller->index();
+
+    break;
+
+
+
+
+
 
 
 
