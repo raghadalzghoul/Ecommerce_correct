@@ -10,26 +10,13 @@
           rel="stylesheet">
 
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/bubble.css">
 </head>
 
 <body>
 
-<nav class="navbar navbar-expand-lg bg-light border-bottom">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="?page=home">
-            SimpleShop
-        </a>
+<?php require __DIR__ . '/partials/navbar.php'; ?>
 
-        <div>
-            <a href="?page=home" class="btn btn-link">Home</a>
-            <a href="#products" class="btn btn-link">Products</a>
-            <a href="?page=cart" class="btn btn-outline-dark">Cart</a>
-            <a href="?page=profile" class="btn btn-outline-dark">
-    My Profile
-</a>
-        </div>
-    </div>
-</nav>
 
 <section class="hero text-center">
     <div class="container">
@@ -56,6 +43,9 @@
 </footer>
 
 <script src="assets/js/home.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="assets/js/navbar.js"></script>
 
 </body>
 </html>

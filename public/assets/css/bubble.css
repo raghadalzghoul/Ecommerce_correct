@@ -1,0 +1,138 @@
+
+:root {
+    --purple: #7953b7;
+    --purple-dark: #59398f;
+    --lavender: #cba9f2;
+    --pink: #f5a9cf;
+    --pink-light: #ffe0f0;
+    --background: #fff9fe;
+    --text: #49365f;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar */
+
+.bubble-navbar {
+    background: white;
+    padding: 15px 0;
+    border-bottom: 2px solid var(--pink-light);
+}
+
+.bubble-logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--purple);
+}
+
+.bubble-logo span {
+    color: var(--pink);
+}
+
+.bubble-navbar .nav-link {
+    color: var(--text);
+    font-weight: 500;
+    padding: 9px 15px !important;
+    border-radius: 20px;
+}
+
+.bubble-navbar .nav-link:hover {
+    background: var(--pink-light);
+    color: var(--purple-dark);
+}
+
+.bubble-dashboard {
+    color: var(--purple) !important;
+    font-weight: bold !important;
+}
+
+/* Buttons */
+
+.bubble-btn,
+.btn-primary,
+.btn-dark {
+    background-color: var(--purple);
+    border-color: var(--purple);
+    color: white;
+    border-radius: 25px;
+    padding: 9px 20px;
+}
+
+.bubble-btn:hover,
+.btn-primary:hover,
+.btn-dark:hover {
+    background-color: var(--purple-dark);
+    border-color: var(--purple-dark);
+    color: white;
+}
+
+.bubble-btn-outline,
+.btn-outline-dark {
+    background: white;
+    color: var(--purple);
+    border: 2px solid var(--lavender);
+    border-radius: 25px;
+    padding: 8px 20px;
+}
+
+.bubble-btn-outline:hover,
+.btn-outline-dark:hover {
+    background: var(--pink-light);
+    color: var(--purple-dark);
+    border-color: var(--pink);
+}
+
+/* Cards and forms */
+
+.card {
+    border: 1px solid var(--pink-light);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: var(--pink-light);
+}
+
+.form-control,
+.form-select {
+    border-radius: 12px;
+    border-color: var(--lavender);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(203, 169, 242, 0.3);
+}
+
+/* Tables */
+
+.table {
+    background: white;
+}
+
+.table-light th {
+    background: var(--pink-light);
+    color: var(--text);
+}
+
+/* Headings */
+
+h1, h2, h3, h4, h5 {
+    color: var(--purple-dark);
+}
+
+/* Links */
+
+a {
+    color: var(--purple);
+}
+
+a:hover {
+    color: var(--purple-dark);
+}

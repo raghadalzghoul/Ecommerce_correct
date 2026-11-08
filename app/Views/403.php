@@ -12,6 +12,7 @@
 </head>
 <body>
 
+<?php require __DIR__ . '/partials/navbar.php'; ?>
 <div class="container text-center mt-5">
 
     <h1 class="text-danger">403 - Access Denied</h1>

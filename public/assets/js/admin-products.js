@@ -7,6 +7,10 @@ const productsTable = document.getElementById("products-table");
 const categorySelect = document.getElementById("category-select");
 const editCategory = document.getElementById("edit-category");
 
+const variantsSection = document.getElementById("variants-section");
+const variantsTable = document.getElementById("variants-table");
+const variantForm = document.getElementById("variant-form");
+
 let products = [];
 
 // Show message
@@ -33,6 +37,7 @@ async function loadCategories() {
 
         data.categories.forEach(category => {
             const option = document.createElement("option");
+
             option.value = category.cat_id;
             option.textContent = category.cat_name;
 
@@ -67,46 +72,66 @@ async function loadProducts() {
         products.forEach(product => {
             const row = document.createElement("tr");
 
-            // Image
+            // Product image
             const imageCell = document.createElement("td");
-            const image = document.createElement("img");
-            image.src = product.image_url || "";
-            image.alt = product.name;
-            image.width = 70;
-            imageCell.appendChild(image);
 
-            // Name
+            if (product.image_url) {
+                const image = document.createElement("img");
+                image.src = product.image_url;
+                image.alt = product.name;
+                image.width = 70;
+                imageCell.appendChild(image);
+            } else {
+                imageCell.textContent = "No image";
+            }
+
+            // Product name
             const nameCell = document.createElement("td");
             nameCell.textContent = product.name;
 
-            // Price
+            // Product price
             const priceCell = document.createElement("td");
             priceCell.textContent = Number(product.price).toFixed(2);
 
-            // Category
+            // Category ID
             const categoryCell = document.createElement("td");
             categoryCell.textContent = product.cat_id;
 
-            // Actions
+            // Action buttons
             const actionCell = document.createElement("td");
 
+            // Variants button
+            const variantsButton = document.createElement("button");
+            variantsButton.className = "btn btn-secondary btn-sm me-2 mb-1";
+            variantsButton.textContent = "Variants";
+
+            variantsButton.onclick = function () {
+                manageVariants(product.product_id, product.name);
+            };
+
+            // Edit button
             const editButton = document.createElement("button");
-            editButton.className = "btn btn-primary btn-sm me-2";
+            editButton.className = "btn btn-primary btn-sm me-2 mb-1";
             editButton.textContent = "Edit";
 
             editButton.onclick = function () {
                 editProduct(product.product_id);
             };
 
+            // Delete button
             const deleteButton = document.createElement("button");
-            deleteButton.className = "btn btn-danger btn-sm";
+            deleteButton.className = "btn btn-danger btn-sm mb-1";
             deleteButton.textContent = "Delete";
 
             deleteButton.onclick = function () {
                 deleteProduct(product.product_id);
             };
 
-            actionCell.append(editButton, deleteButton);
+            actionCell.append(
+                variantsButton,
+                editButton,
+                deleteButton
+            );
 
             row.append(
                 imageCell,
@@ -148,7 +173,7 @@ form.onsubmit = async function (event) {
         showMessage("Product added successfully!");
 
         form.reset();
-        loadProducts();
+        await loadProducts();
 
     } catch (error) {
         showMessage(error.message, "danger");
@@ -162,6 +187,7 @@ function editProduct(productId) {
     );
 
     if (!product) {
+        showMessage("Product not found.", "danger");
         return;
     }
 
@@ -172,7 +198,7 @@ function editProduct(productId) {
         product.name;
 
     document.getElementById("edit-description").value =
-        product.description;
+        product.description || "";
 
     document.getElementById("edit-price").value =
         product.price;
@@ -198,6 +224,13 @@ editForm.onsubmit = async function (event) {
 
     const formData = new FormData(editForm);
 
+    // Do not send an empty image file
+    const imageInput = document.getElementById("edit-image");
+
+    if (imageInput.files.length === 0) {
+        formData.delete("image");
+    }
+
     try {
         const response = await fetch(
             "index.php?api=admin-update-product&id=" + productId,
@@ -218,7 +251,7 @@ editForm.onsubmit = async function (event) {
         editForm.reset();
         document.getElementById("edit-product-id").value = "";
 
-        loadProducts();
+        await loadProducts();
 
     } catch (error) {
         showMessage(error.message, "danger");
@@ -251,13 +284,216 @@ async function deleteProduct(productId) {
 
         showMessage("Product deleted successfully!");
 
-        loadProducts();
+        // Hide variants if the deleted product is selected
+        const selectedId =
+            document.getElementById("variant-product-id").value;
+
+        if (selectedId == productId) {
+            variantsSection.hidden = true;
+            document.getElementById("variant-product-id").value = "";
+        }
+
+        await loadProducts();
 
     } catch (error) {
         showMessage(error.message, "danger");
     }
 }
 
-// Load data when page opens
+// Open product variants
+async function manageVariants(productId, productName) {
+    document.getElementById("variant-product-id").value = productId;
+
+    document.getElementById("variant-product-name").textContent =
+        productName;
+
+    variantsSection.hidden = false;
+
+    await loadVariants(productId);
+
+    variantsSection.scrollIntoView({ behavior: "smooth" });
+}
+
+// Load variants
+async function loadVariants(productId) {
+    try {
+        const response = await fetch(
+            "index.php?api=product-variants&id=" + productId
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Failed to load variants");
+        }
+
+        variantsTable.innerHTML = "";
+
+        const variants = data.variants;
+
+        if (variants.length === 0) {
+            variantsTable.innerHTML =
+                '<tr><td colspan="4">No variants found.</td></tr>';
+            return;
+        }
+
+        variants.forEach(variant => {
+            const row = document.createElement("tr");
+
+            // Size
+            const sizeCell = document.createElement("td");
+            sizeCell.textContent = variant.size;
+
+            // Color
+            const colorCell = document.createElement("td");
+            colorCell.textContent = variant.color;
+
+            // Quantity input
+            const quantityCell = document.createElement("td");
+
+            const quantityInput = document.createElement("input");
+            quantityInput.type = "number";
+            quantityInput.min = "0";
+            quantityInput.step = "1";
+            quantityInput.value = variant.quantity;
+            quantityInput.className = "form-control";
+            quantityInput.style.width = "100px";
+
+            quantityCell.appendChild(quantityInput);
+
+            // Save quantity button
+            const actionCell = document.createElement("td");
+
+            const saveButton = document.createElement("button");
+            saveButton.className = "btn btn-primary btn-sm";
+            saveButton.textContent = "Save Quantity";
+
+            saveButton.onclick = function () {
+                updateVariantQuantity(
+                    variant.variant_id,
+                    quantityInput.value
+                );
+            };
+
+            actionCell.appendChild(saveButton);
+
+            row.append(
+                sizeCell,
+                colorCell,
+                quantityCell,
+                actionCell
+            );
+
+            variantsTable.appendChild(row);
+        });
+
+    } catch (error) {
+        showMessage(error.message, "danger");
+    }
+}
+
+// Add new variant
+variantForm.onsubmit = async function (event) {
+    event.preventDefault();
+
+    const productId =
+        document.getElementById("variant-product-id").value;
+
+    if (!productId) {
+        showMessage("Choose a product first.", "warning");
+        return;
+    }
+
+    const formData = new FormData(variantForm);
+
+    const variant = {
+        product_id: Number(productId),
+        size: String(formData.get("size")).trim(),
+        color: String(formData.get("color")).trim(),
+        quantity: Number(formData.get("quantity"))
+    };
+
+    if (
+        !variant.size ||
+        !variant.color ||
+        !Number.isInteger(variant.quantity) ||
+        variant.quantity < 0
+    ) {
+        showMessage("Enter valid variant details.", "warning");
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "index.php?api=admin-create-variant",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(variant)
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Failed to add variant");
+        }
+
+        showMessage("Variant added successfully!");
+
+        variantForm.reset();
+        await loadVariants(productId);
+
+    } catch (error) {
+        showMessage(error.message, "danger");
+    }
+};
+
+// Update variant quantity
+async function updateVariantQuantity(variantId, quantity) {
+    const productId =
+        document.getElementById("variant-product-id").value;
+
+    if (
+        quantity === "" ||
+        !Number.isInteger(Number(quantity)) ||
+        Number(quantity) < 0
+    ) {
+        showMessage("Enter a valid quantity.", "warning");
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "index.php?api=admin-update-variant-quantity&id=" + variantId,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    quantity: Number(quantity)
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Failed to update quantity");
+        }
+
+        showMessage("Quantity updated successfully!");
+
+        await loadVariants(productId);
+
+    } catch (error) {
+        showMessage(error.message, "danger");
+    }
+}
+
+// Initial loading
 loadCategories();
 loadProducts();
